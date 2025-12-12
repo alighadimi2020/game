@@ -137,10 +137,10 @@ function updateGrandTotal() {
 
 function getHourlyRate(controllers) {
     const numControllers = parseInt(controllers);
-    if (numControllers === 1) return 80;
-    if (numControllers === 2) return 140;
-    if (numControllers === 3) return 165;
-    if (numControllers === 4) return 220;
+    if (numControllers === 1) return 80000;
+    if (numControllers === 2) return 140000;
+    if (numControllers === 3) return 165000;
+    if (numControllers === 4) return 220000;
     return 0;
 }
 
