@@ -1,0 +1,142 @@
+ body {
+        font-family: Tahoma, Arial, sans-serif;
+        padding: 15px;
+        background: #eff0efe5;
+    }
+
+    .top-box {
+        background: white;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+
+    input, select, textarea { 
+        width: 100%;
+        padding: 10px;
+        margin-top: 6px;
+        margin-bottom: 12px;
+        font-size: 16px;
+        box-sizing: border-box;
+        resize: vertical;
+        border: 1px solid #ccc; 
+    }
+    
+    .print-hide-border {
+        border: none !important;
+    }
+
+    .table-container { 
+        overflow-x: auto;
+        margin-bottom: 15px;
+    }
+
+    table {
+        min-width: 900px; 
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+
+    th, td {
+        border: 1px solid #ddd;
+        padding: 10px;
+        text-align: center;
+        font-size: 16px;
+        white-space: nowrap;
+    }
+    
+    th {
+        background: #2c3e50;
+        color: white;
+    }
+
+    #grandTotalRow td {
+        background-color: #ecf0f1;
+        font-weight: bold;
+        color: #2c3e50;
+        text-align: right;
+        font-size: 18px;
+    }
+    #grandTotalRow #totalAmount {
+        text-align: center;
+        background-color: #34495e;
+        color: white;
+        padding: 10px;
+        border-radius: 4px;
+    }
+
+    #addRowBtn, #screenshotBtn, #refreshBtn {
+        width: 100%;
+        padding: 12px;
+        font-size: 18px;
+        border: none;
+        border-radius: 6px;
+        margin-top: 10px;
+        cursor: pointer;
+        margin-bottom: 5px; 
+    }
+
+    #addRowBtn {
+        background: #2480bd;
+        color: white;
+    }
+
+    #screenshotBtn { 
+        background: #0af86d;
+        color: white;
+    }
+
+    #refreshBtn {
+        background: #e81123;
+        color: white;
+    }
+
+    .stop-button {
+        background-color: #e74c3c;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    .delete-button {
+        background-color: #95a5a6;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        margin-left: 5px;
+    }
+
+    #notes-container {
+        margin-top: 25px;
+        padding: 15px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+    .row-note-box {
+        border: 1px solid #ddd;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+    }
+    .note-header {
+        font-weight: bold;
+        margin-bottom: 5px;
+        color: #2c3e50;
+        border-bottom: 1px dashed #eee;
+        padding-bottom: 5px;
+    }
+    .note-textarea {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #ccc;
+        resize: vertical;
+    }
