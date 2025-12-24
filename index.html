@@ -11,9 +11,13 @@
     <script src="persianDatepicker.js"></script> 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-</head>
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/samim-font@v4.0.5/dist/font-face.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/iran-nastaliq-font@v1.0.0/dist/font-face.css" rel="stylesheet" type="text/css" />
 
-<body>
+    <div id="splash-screen">
+    <h1 class="bismillah">به نام خدا</h1>
+    </div>
+
 
 <div class="top-box">
     <label for="operatorName">متصدی:</label>
@@ -51,11 +55,16 @@
     </div>
 </div>
 
-<div class="controls">
-    <button id="addRowBtn">➕ اضافه کردن سطر</button>
-    <button id="screenshotBtn">دریافت گزارش (تصویر)</button>
-    <button id="submitToSheetBtn" style="background-color: #28a745; color: white;">🚀 ارسال به گوگل شیت</button>
-    <button id="refreshBtn" style="background-color: #dc3545; color: white;">پاک کردن همهٔ داده‌ها</button>
+<div class="menu-container">
+    <button id="menuToggleBtn" class="menu-dots-btn">
+        <span>⋮</span> <b>ابزارها</b>
+    </button>
+    
+    <div id="optionsMenu" class="dropdown-content">
+        <button id="addRowBtn" style="background-color: rgb(45, 67, 166); color: rgb(255, 255, 255);">➕ اضافه کردن سطر</button>
+        <button id="submitToSheetBtn" style="background-color: #acedbb; color: rgb(0, 0, 0);">🚀 ارسال به گوگل شیت</button>
+        <button id="refreshBtn" style="background-color: #a2e7ef; color: rgb(0, 0, 0);">پاک کردن همهٔ داده‌ها</button>
+    </div>
 </div>
 
 <div id="notes-container">
@@ -63,6 +72,46 @@
     <div id="notes-list"></div>
 </div>
 
+<script>
+    window.addEventListener('load', () => {
+        const splash = document.getElementById('splash-screen');
+        const main = document.getElementById('main-content');
+
+        setTimeout(() => {
+            // محو کردن صفحه به نام خدا
+            splash.style.opacity = '0';
+            
+            setTimeout(() => {
+                splash.style.display = 'none'; // حذف کامل از صفحه
+                main.style.display = 'block'; // نمایش سایت اصلی
+            }, 1000); // زمان انیمیشن محو شدن
+            
+        }, 2000); // مدت زمان نمایش "به نام خدا" (۳ ثانیه)
+    });
+</script>
+
 <script src="main.js"></script>
+
+<script>
+    // صبر می‌کنیم تا کل صفحه لود بشه
+    document.addEventListener('DOMContentLoaded', function() {
+        const btn = document.getElementById('menuToggleBtn');
+        const menu = document.getElementById('optionsMenu');
+
+        // ۱. با کلیک روی دکمه، منو باز یا بسته بشه
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation(); // جلوگیری از بسته شدن آنی
+            menu.classList.toggle('show-menu');
+        });
+
+        // ۲. اگر کاربر جای دیگری کلیک کرد، منو بسته بشه
+        document.addEventListener('click', function(event) {
+            if (!menu.contains(event.target) && event.target !== btn) {
+                menu.classList.remove('show-menu');
+            }
+        });
+    });
+</script>
+
 </body>
 </html>
