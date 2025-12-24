@@ -36,19 +36,25 @@ function getRowData() {
     document.querySelectorAll('#gameTable tbody tr').forEach(row => {
         const rowId = row.dataset.rowId; 
         const noteElement = document.getElementById(`note-${rowId}`);
-        rows.push({
-            id: rowId,
-            name: row.querySelector('.person-name').value,
-            tvNum: row.querySelector('.tv-number').value,
-            controller: row.querySelector('.controller-select').value,
-            startTime: row.dataset.startTime || '', 
-            endTime: row.dataset.endTime || '', 
-            price: row.querySelector('.priceBox').value,
-            paymentType: row.querySelector('.payment-type').value,
-            notes: noteElement ? noteElement.value : '',
-            isRunning: row.dataset.isRunning === 'true', 
-            startTimestamp: row.dataset.startTimestamp || null,
-        });
+        
+        // --- اصلاحیه: فقط اگر بازی تمام شده بود و قبلاً ارسال نشده بود ---
+        const isRunning = row.dataset.isRunning === 'true';
+        const endTime = row.dataset.endTime || '';
+        const isAlreadySent = row.dataset.isSent === 'true'; // چک کردن وضعیت ارسال
+
+        if (!isRunning && endTime !== '' && !isAlreadySent) {
+            rows.push({
+                id: rowId,
+                name: row.querySelector('.person-name').value,
+                tvNum: row.querySelector('.tv-number').value,
+                controller: row.querySelector('.controller-select').value,
+                startTime: row.dataset.startTime || '', 
+                endTime: endTime, 
+                price: row.querySelector('.priceBox').value,
+                paymentType: row.querySelector('.payment-type').value,
+                notes: noteElement ? noteElement.value : '',
+            });
+        }
     });
     return rows;
 }
@@ -221,13 +227,20 @@ async function sendToGoogleSheet() {
     const operator = document.getElementById('operatorName').value;
     if(!operator) { alert("لطفاً نام متصدی را وارد کنید"); return; }
 
+    const rowsToSend = getRowData(); // ردیف‌های فیلتر شده
+
+    if (rowsToSend.length === 0) {
+        alert("مورد جدیدی برای ارسال وجود ندارد (یا بازی‌ها هنوز تمام نشده‌اند).");
+        return;
+    }
+
     btn.disabled = true;
     btn.textContent = "در حال ارسال...";
 
     const data = {
         operator: operator,
         date: document.getElementById('todayDate').value,
-        rows: getRowData()
+        rows: rowsToSend
     };
 
     try {
@@ -238,7 +251,20 @@ async function sendToGoogleSheet() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        alert("اطلاعات با موفقیت به دفتر آنلاین ارسال شد!");
+
+        // --- اصلاحیه: علامت‌گذاری ردیف‌های ارسال شده ---
+        rowsToSend.forEach(sentRow => {
+            const rowElement = document.querySelector(`tr[data-row-id="${sentRow.id}"]`);
+            if (rowElement) {
+                rowElement.dataset.isSent = 'true'; // علامت در دیتای زنده
+                rowElement.style.opacity = "0.6"; // کمرنگ کردن برای تشخیص بصری
+                rowElement.querySelector('.delete-button').textContent = "ارسال شد ✅";
+            }
+        });
+
+        saveData(); // ذخیره وضعیت جدید در LocalStorage
+        alert(`${rowsToSend.length} مورد با موفقیت به دفتر آنلاین ارسال شد!`);
+        
     } catch (e) {
         console.error(e);
         alert("خطا در ارسال.");
