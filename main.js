@@ -1,7 +1,7 @@
 const rowTimers = {}; 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbweegrepVjbxlyETdwJG2n9VyiOVVpKGh-fNac-YGtuLeuk76dRPNm1wT6Q0nHlarQp/exec"; // آدرس گوگل اسکریپت را اینجا بگذار
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbweegrepVjbxlyETdwJG2n9VyiOVVpKGh-fNac-YGtuLeuk76dRPNm1wT6Q0nHlarQp/exec"; 
 
-// --- بخش تبدیل تاریخ (بدون تغییر) ---
+// --- بخش تبدیل تاریخ (تقویم شمسی داخلی) ---
 function toJalali(gy, gm, gd) {
     var g_days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     var j_days_in_month = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
@@ -71,7 +71,7 @@ function loadData() {
     }
     const data = JSON.parse(storedData);
     document.getElementById('operatorName').value = data.operatorName || '';
-    document.getElementById('todayDate').value = data.todayDate || '';
+    document.getElementById('todayDate').value = data.todayDate || getShamsiDate();
 
     const tableBody = document.querySelector("#gameTable tbody");
     tableBody.innerHTML = ''; 
@@ -125,7 +125,6 @@ function addRow(data = {}) {
     const row = document.createElement("tr");
     row.dataset.rowId = rowId;
     
-    // مقادیر پیش‌فرض
     const rowData = { name: '', tvNum: '1', controller: '4', price: '0', paymentType: 'cash', isRunning: false, ...data };
 
     row.innerHTML = `
@@ -159,7 +158,6 @@ function addRow(data = {}) {
         <td data-label="عملیات"><button class="delete-button" onclick="deleteRow(this.closest('tr'))">حذف</button></td>
     `;
     
-    // انتقال دیتاهای مخفی به المنت
     row.dataset.startTime = rowData.startTime || '';
     row.dataset.endTime = rowData.endTime || '';
     row.dataset.isRunning = rowData.isRunning;
@@ -218,7 +216,6 @@ function formatDuration(ms) {
     return `${Math.floor(s/3600).toString().padStart(2,'0')}:${Math.floor((s%3600)/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
 }
 
-// --- اتصال به گوگل شیت (بخش جدید) ---
 async function sendToGoogleSheet() {
     const btn = document.getElementById('submitToSheetBtn');
     const operator = document.getElementById('operatorName').value;
@@ -234,9 +231,9 @@ async function sendToGoogleSheet() {
     };
 
     try {
-        const response = await fetch(SCRIPT_URL, {
+        await fetch(SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', // برای جلوگیری از خطای CORS در Apps Script
+            mode: 'no-cors',
             cache: 'no-cache',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -244,14 +241,13 @@ async function sendToGoogleSheet() {
         alert("اطلاعات با موفقیت به دفتر آنلاین ارسال شد!");
     } catch (e) {
         console.error(e);
-        alert("خطا در ارسال. مطمئن شوید URL اسکریپت را درست ست کرده‌اید.");
+        alert("خطا در ارسال.");
     } finally {
         btn.disabled = false;
         btn.textContent = "🚀 ارسال به گوگل شیت";
     }
 }
 
-// --- سایر توابع کمکی ---
 function createNoteBox(rowId, rowData) {
     const container = document.getElementById("notes-list");
     const div = document.createElement("div");
@@ -278,10 +274,35 @@ function deleteRow(row) {
     }
 }
 
-// --- اجرایی ---
+// --- بخش اجرایی و فعال‌سازی تقویم (اصلاح شده) ---
 document.addEventListener('DOMContentLoaded', () => {
+    // ۱. لود کردن داده‌های ذخیره شده
     loadData();
-    document.getElementById("addRowBtn").onclick = () => { addRow(); saveData(); };
-    document.getElementById("refreshBtn").onclick = () => { if(confirm("کل جدول پاک شود؟")) { localStorage.clear(); location.reload(); } };
-    document.getElementById("submitToSheetBtn").onclick = sendToGoogleSheet;
+
+    // ۲. فعال‌سازی تقویم شمسی روی فیلد تاریخ
+    if (window.jQuery && $.fn.persianDatepicker) {
+        $("#todayDate").persianDatepicker({
+            format: 'YYYY/MM/DD',
+            autoClose: true,
+            onSelect: function() {
+                saveData(); // ذخیره خودکار بعد از انتخاب تاریخ
+            }
+        });
+    }
+
+    // ۳. تنظیم رویداد دکمه‌ها
+    document.getElementById("addRowBtn").onclick = () => { 
+        addRow(); 
+        saveData(); 
+    };
+
+    document.getElementById("refreshBtn").onclick = () => { 
+        if(confirm("کل جدول پاک شود؟")) { 
+            localStorage.clear(); 
+            location.reload(); 
+        } 
+    };
+
+    const sheetBtn = document.getElementById("submitToSheetBtn");
+    if(sheetBtn) sheetBtn.onclick = sendToGoogleSheet;
 });
