@@ -1,50 +1,46 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-512x512.png"> 
-<link rel="icon" href="icon-512x512.png">
-<link rel="stylesheet" href="style.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<title>بازی سرا</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>بازی سرا - نسخه گوگل شیت</title>
 
-<link href="persianDatepicker-default.css" rel="stylesheet" /> 
-
-<script src="jquery.js"></script>
-<script src="persianDatepicker.js"></script> 
-
+    <link href="persianDatepicker-default.css" rel="stylesheet" /> 
+    <script src="jquery.js"></script>
+    <script src="persianDatepicker.js"></script> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 
-<body onload="loadData()">
+<body>
 
 <div class="top-box">
     <label for="operatorName">متصدی:</label>
-    <input type="text" id="operatorName" onchange="saveData()">
+    <input type="text" id="operatorName">
 
     <label for="todayDate">تاریخ:</label>
-    <input type="text" id="todayDate" value=""></div>
+    <input type="text" id="todayDate">
+</div>
     
 <div id="pdfContent">
     <div class="table-container">
         <table id="gameTable">
             <thead>
                 <tr>
-                    <th>نام </th> 
-                    <th>TV </th>
+                    <th>نام</th> 
+                    <th>TV</th>
                     <th>دسته</th>
-                    <th> زمان</th> 
+                    <th>زمان</th> 
                     <th>زمان شروع</th> 
                     <th>زمان پایان</th>
-                     <th>قیمت کل </th> 
+                    <th>قیمت کل</th> 
                     <th>نوع پرداخت</th> 
                     <th>حذف</th> 
                 </tr>
             </thead>
             <tbody>
-            </tbody>
+                </tbody>
             <tfoot id="grandTotalRow">
                 <tr>
                     <td colspan="6" style="text-align: right;">مجموع کل برای امروز:</td> 
@@ -55,15 +51,17 @@
     </div>
 </div>
 
-<button id="addRowBtn">➕ اضافه کردن سطر</button>
-<button id="screenshotBtn">دریافت گزارش</button>
-<button id="refreshBtn">رفرش و پاک کردن همهٔ داده‌ها</button>
-<div id="notes-container">
-    <h3>توضیحات سطرها</h3>
-    <div id="notes-list">
-        </div>
+<div class="controls">
+    <button id="addRowBtn">➕ اضافه کردن سطر</button>
+    <button id="screenshotBtn">دریافت گزارش (تصویر)</button>
+    <button id="submitToSheetBtn" style="background-color: #28a745; color: white;">🚀 ارسال به گوگل شیت</button>
+    <button id="refreshBtn" style="background-color: #dc3545; color: white;">پاک کردن همهٔ داده‌ها</button>
 </div>
 
+<div id="notes-container">
+    <h3>توضیحات سطرها</h3>
+    <div id="notes-list"></div>
+</div>
 
 <script src="main.js"></script>
 </body>
