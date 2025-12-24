@@ -428,3 +428,20 @@ function checkDuplicateTV(selectElement) {
         saveData(); // اگر مشکلی نبود ذخیره کن
     }
 }
+
+
+const menuBtn = document.getElementById('menuToggleBtn');
+const optionsMenu = document.getElementById('optionsMenu');
+
+// باز و بسته کردن منو با کلیک روی دکمه
+menuBtn.addEventListener('click', (e) => {
+    optionsMenu.classList.toggle('show');
+    e.stopPropagation(); // جلوگیری از بسته شدن بلافاصله
+});
+
+// بستن منو در صورتی که کاربر جای دیگری از صفحه کلیک کند
+window.addEventListener('click', () => {
+    if (optionsMenu.classList.contains('show')) {
+        optionsMenu.classList.remove('show');
+    }
+});
