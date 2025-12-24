@@ -1,6 +1,20 @@
 const rowTimers = {}; 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbweegrepVjbxlyETdwJG2n9VyiOVVpKGh-fNac-YGtuLeuk76dRPNm1wT6Q0nHlarQp/exec"; 
 
+
+
+// تابعی برای اضافه کردن کاما به اعداد
+function formatPrice(number) {
+    if (!number) return "0";
+    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+// تابعی برای حذف کاما (وقتی می‌خواهیم با عدد ریاضی کار کنیم)
+function unformatPrice(string) {
+    return string.toString().replace(/,/g, '');
+}
+
+
 // --- بخش تبدیل تاریخ (تقویم شمسی داخلی) ---
 function toJalali(gy, gm, gd) {
     var g_days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
@@ -60,13 +74,33 @@ function getRowData() {
 }
 
 function saveData() {
+    const allRows = [];
+    document.querySelectorAll('#gameTable tbody tr').forEach(row => {
+        const rowId = row.dataset.rowId;
+        const noteElement = document.getElementById(`note-${rowId}`);
+        allRows.push({
+            id: rowId,
+            name: row.querySelector('.person-name').value,
+            tvNum: row.querySelector('.tv-number').value,
+            controller: row.querySelector('.controller-select').value,
+            startTime: row.dataset.startTime || '',
+            endTime: row.dataset.endTime || '',
+            price: unformatPrice(row.querySelector('.priceBox').value), // ذخیره عدد بدون کاما
+            paymentType: row.querySelector('.payment-type').value,
+            notes: noteElement ? noteElement.value : '',
+            isRunning: row.dataset.isRunning === 'true',
+            isSent: row.dataset.isSent === 'true',
+            startTimestamp: row.dataset.startTimestamp || null
+        });
+    });
+
     const data = {
         operatorName: document.getElementById('operatorName').value,
         todayDate: document.getElementById('todayDate').value,
-        rows: getRowData(),
+        rows: allRows
     };
     localStorage.setItem('gameRoomData', JSON.stringify(data));
-    updateGrandTotal(); 
+    updateGrandTotal();
 }
 
 function loadData() {
@@ -97,8 +131,11 @@ function loadData() {
 function updateGrandTotal() {
     let grandTotal = 0;
     document.querySelectorAll('.priceBox').forEach(box => {
-        grandTotal += parseFloat(box.value) || 0; 
+        // اول کاماها را حذف می‌کنیم تا بتوانیم جمع بزنیم
+        const rawValue = unformatPrice(box.value);
+        grandTotal += parseFloat(rawValue) || 0; 
     });
+    // حالا جمع کل را با فرمت فارسی و جداکننده نشان می‌دهیم
     document.getElementById('totalAmount').textContent = grandTotal.toLocaleString('fa-IR') + " تومان";
 }
 
@@ -119,8 +156,8 @@ function calculateTotal(rowElement) {
     let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
     if (diff < 0) diff += 1440; 
 
-    const totalPrice = (diff / 60) * rate;
-    rowElement.querySelector('.priceBox').value = Math.round(totalPrice);
+    const resultPrice = Math.round((diff / 60) * rate); // محاسبه قیمت
+    rowElement.querySelector('.priceBox').value = formatPrice(resultPrice); 
     saveData();
 }
 
@@ -131,12 +168,26 @@ function addRow(data = {}) {
     const row = document.createElement("tr");
     row.dataset.rowId = rowId;
     
-    const rowData = { name: '', tvNum: '1', controller: '4', price: '0', paymentType: 'cash', isRunning: false, ...data };
+    // مقادیر پیش‌فرض همراه با چک کردن وضعیت ارسال شده
+    const rowData = { 
+        name: '', 
+        tvNum: '', // پیش‌فرض خالی گذاشتم تا متصدی مجبور به انتخاب شود
+        controller: '4', 
+        price: '0', 
+        paymentType: 'cash', 
+        isRunning: false,
+        isSent: false, // اضافه شدن وضعیت ارسال
+        ...data 
+    };
+
+    // در اینجا قیمت را قبل از نمایش فرمت می‌کنیم
+    const formattedPrice = formatPrice(rowData.price);
 
     row.innerHTML = `
         <td data-label="نام"><input type="text" class="person-name" value="${rowData.name}" onchange="saveData(); updateNoteHeader(this.closest('tr'));"></td> 
         <td data-label="TV">
-            <select class="tv-number" onchange="saveData(); updateNoteHeader(this.closest('tr'));">
+            <select class="tv-number" onchange="checkDuplicateTV(this); updateNoteHeader(this.closest('tr'));">
+                <option value="">انتخاب...</option>
                 ${[1,2,3,4,5].map(n => `<option value="${n}" ${rowData.tvNum == n ? 'selected' : ''}>${n}</option>`).join('')}
             </select>
         </td>
@@ -149,12 +200,14 @@ function addRow(data = {}) {
             </select>
         </td>
         <td data-label="زمان">
-            <button class="stop-button" onclick="handleTimer(this.closest('tr'))">${rowData.isRunning ? 'اتمام' : 'شروع'}</button>
+            <button class="stop-button" onclick="handleTimer(this.closest('tr'))" ${rowData.isSent ? 'disabled' : ''}>
+                ${rowData.isSent ? 'ارسال شده' : (rowData.isRunning ? 'اتمام' : 'شروع')}
+            </button>
             <div class="duration-display">${rowData.isRunning ? '...' : '00:00:00'}</div>
         </td>
         <td data-label="شروع" class="display-start-time">${rowData.startTime || '---'}</td>
         <td data-label="پایان" class="display-end-time">${rowData.endTime || '---'}</td>
-        <td data-label="قیمت"><input class="priceBox" type="text" readonly value="${rowData.price}"></td>
+        <td data-label="قیمت"><input class="priceBox" type="text" readonly value="${formattedPrice}"></td>
         <td data-label="پرداخت">
             <select class="payment-type" onchange="saveData()">
                 <option value="cash" ${rowData.paymentType == 'cash' ? 'selected' : ''}>نقد</option>
@@ -164,10 +217,18 @@ function addRow(data = {}) {
         <td data-label="عملیات"><button class="delete-button" onclick="deleteRow(this.closest('tr'))">حذف</button></td>
     `;
     
+    // ذخیره مقادیر در دیتای ردیف برای استفاده در محاسبات
     row.dataset.startTime = rowData.startTime || '';
     row.dataset.endTime = rowData.endTime || '';
     row.dataset.isRunning = rowData.isRunning;
     row.dataset.startTimestamp = rowData.startTimestamp || '';
+    row.dataset.isSent = rowData.isSent; // ذخیره وضعیت ارسال
+
+    // اگر قبلاً ارسال شده، ردیف را کمرنگ نشان بده
+    if(rowData.isSent) {
+        row.style.opacity = "0.5";
+        row.style.backgroundColor = "#f0f0f0";
+    }
 
     tableBody.appendChild(row);
     createNoteBox(rowId, rowData);
@@ -178,9 +239,16 @@ function handleTimer(rowElement) {
     if (rowElement.dataset.isRunning === 'true') {
         stopStopwatch(rowElement);
     } else {
+        // قبل از شروع، چک می‌کنیم که حتما شماره TV انتخاب شده باشد
+        const tvNum = rowElement.querySelector('.tv-number').value;
+        if (!tvNum) {
+            alert("لطفاً ابتدا شماره تلویزیون را انتخاب کنید.");
+            return;
+        }
         startStopwatch(rowElement);
     }
 }
+
 
 function startStopwatch(rowElement, isRecovery = false) {
     const rowId = rowElement.dataset.rowId;
@@ -332,3 +400,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const sheetBtn = document.getElementById("submitToSheetBtn");
     if(sheetBtn) sheetBtn.onclick = sendToGoogleSheet;
 });
+
+function checkDuplicateTV(selectElement) {
+    const selectedTV = selectElement.value;
+    const currentRow = selectElement.closest('tr');
+    const allRows = document.querySelectorAll('#gameTable tbody tr');
+
+    let isDuplicate = false;
+
+    allRows.forEach(row => {
+        // اگر این ردیف، همان ردیفی نباشد که داریم تغییرش می‌دهیم
+        if (row !== currentRow) {
+            const tvNum = row.querySelector('.tv-number').value;
+            const isRunning = row.dataset.isRunning === 'true';
+
+            // اگر شماره TV یکی بود و آن دستگاه هم در حال بازی بود
+            if (tvNum === selectedTV && isRunning) {
+                isDuplicate = true;
+            }
+        }
+    });
+
+    if (isDuplicate) {
+        alert("خطا: این تلویزیون در حال حاضر توسط مشتری دیگری اشغال شده است!");
+        selectElement.value = ""; // مقدار را ریست کن
+    } else {
+        saveData(); // اگر مشکلی نبود ذخیره کن
+    }
+}
