@@ -1,12 +1,12 @@
-/* تنظیمات پایه و فونت */
 body {
-    font-family: 'Mikhak', sans-serif;
+    font-family: 'Mikhak', sans-serif ;
     font-size: 20px;
     padding: 15px;
     background: #f4f7f6;
     margin: 0;
     direction: rtl;
 }
+
 
 /* باکس بالایی (متصدی و تاریخ) */
 .top-box {
@@ -217,7 +217,7 @@ th {
 .bismillah {
     font-family: 'IranNastaliq', serif !important;
     text-align: center;
-    font-size: 4rem;
+    font-size: 2.5rem;
     color: #000000;
     opacity: 1;
     transform: translateY(40px);
@@ -249,4 +249,39 @@ th {
 body, input, button, textarea, select, optgroup {
     font-family: 'Samim', Tahoma, sans-serif !important;
     direction: rtl;
+}
+
+.banner-container {
+    position: relative;
+    width: 100%;
+    height: 500px; /* ارتفاع دلخواه برای دسکتاپ */
+    overflow: hidden; /* برای جلوگیری از بیرون زدن عکس */
+}
+
+.main-banner {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; 
+    object-position: center; /* تمرکز روی وسط عکس */
+}
+
+/* ایجاد یک لایه تیره ملایم برای زیبایی و خوانایی بیشتر */
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 70%;
+    height: 70%;
+    background: rgba(0, 0, 0, 0.4); /* عدد 0.4 را کم و زیاد کنید */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+}
+
+/* واکنش‌گرا کردن برای موبایل */
+@media (max-width: 768px) {
+    .banner-container {
+        height: 250px; /* ارتفاع کمتر برای موبایل */
+    }
 }
