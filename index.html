@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
-    <title>بازی سرا - نسخه گوگل شیت</title>
+    <title>مدیریت دفتری بازی سرا</title>
 
     <link href="persianDatepicker-default.css" rel="stylesheet" /> 
     <script src="jquery.js"></script>
@@ -27,16 +27,16 @@
 
 <div class="top-box">
     <label for="operatorName">متصدی:</label>
-    <input type="text" id="operatorName">
+    <input type="text" id="operatorName" style="width: 100px; height: 40px; margin-left: 30px;">
 
-    <label for="todayDate">تاریخ:</label>
-    <input type="text" id="todayDate">
+    <label for="todayDate" >تاریخ:</label>
+    <input type="text" id="todayDate" style="width: 100px; height: 40px;">
 </div>
     
 <div id="pdfContent">
     <div class="table-container">
         <table id="gameTable">
-            <thead>
+            <thead style="font-family: Vazirmatn ;">
                 <tr>
                     <th>نام</th> 
                     <th>TV</th>
@@ -78,46 +78,10 @@
     <div id="notes-list"></div>
 </div>
 
-<script>
-    window.addEventListener('load', () => {
-        const splash = document.getElementById('splash-screen');
-        const main = document.getElementById('main-content');
-
-        setTimeout(() => {
-            // محو کردن صفحه به نام خدا
-            splash.style.opacity = '0';
-            
-            setTimeout(() => {
-                splash.style.display = 'none'; // حذف کامل از صفحه
-                main.style.display = 'block'; // نمایش سایت اصلی
-            }, 1000); // زمان انیمیشن محو شدن
-            
-        }, 2000); // مدت زمان نمایش "به نام خدا" (۳ ثانیه)
-    });
-</script>
 
 <script src="main.js"></script>
 
-<script>
-    // صبر می‌کنیم تا کل صفحه لود بشه
-    document.addEventListener('DOMContentLoaded', function() {
-        const btn = document.getElementById('menuToggleBtn');
-        const menu = document.getElementById('optionsMenu');
 
-        // ۱. با کلیک روی دکمه، منو باز یا بسته بشه
-        btn.addEventListener('click', function(e) {
-            e.stopPropagation(); // جلوگیری از بسته شدن آنی
-            menu.classList.toggle('show-menu');
-        });
-
-        // ۲. اگر کاربر جای دیگری کلیک کرد، منو بسته بشه
-        document.addEventListener('click', function(event) {
-            if (!menu.contains(event.target) && event.target !== btn) {
-                menu.classList.remove('show-menu');
-            }
-        });
-    });
-</script>
 
 </body>
 </html>
