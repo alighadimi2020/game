@@ -3,19 +3,16 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbweegrepVjbxlyETdwJG
 
 
 
-// تابعی برای اضافه کردن کاما به اعداد
 function formatPrice(number) {
     if (!number) return "0";
     return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-// تابعی برای حذف کاما (وقتی می‌خواهیم با عدد ریاضی کار کنیم)
 function unformatPrice(string) {
     return string.toString().replace(/,/g, '');
 }
 
 
-// --- بخش تبدیل تاریخ (تقویم شمسی داخلی) ---
 function toJalali(gy, gm, gd) {
     var g_days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     var j_days_in_month = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
@@ -44,17 +41,15 @@ function getShamsiDate() {
     return toJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
 }
 
-// --- مدیریت داده‌ها و ذخیره‌سازی ---
 function getRowData() {
     const rows = [];
     document.querySelectorAll('#gameTable tbody tr').forEach(row => {
         const rowId = row.dataset.rowId; 
         const noteElement = document.getElementById(`note-${rowId}`);
         
-        // --- اصلاحیه: فقط اگر بازی تمام شده بود و قبلاً ارسال نشده بود ---
         const isRunning = row.dataset.isRunning === 'true';
         const endTime = row.dataset.endTime || '';
-        const isAlreadySent = row.dataset.isSent === 'true'; // چک کردن وضعیت ارسال
+        const isAlreadySent = row.dataset.isSent === 'true'; 
 
         if (!isRunning && endTime !== '' && !isAlreadySent) {
             rows.push({
@@ -85,7 +80,7 @@ function saveData() {
             controller: row.querySelector('.controller-select').value,
             startTime: row.dataset.startTime || '',
             endTime: row.dataset.endTime || '',
-            price: unformatPrice(row.querySelector('.priceBox').value), // ذخیره عدد بدون کاما
+            price: unformatPrice(row.querySelector('.priceBox').value),
             paymentType: row.querySelector('.payment-type').value,
             notes: noteElement ? noteElement.value : '',
             isRunning: row.dataset.isRunning === 'true',
@@ -127,15 +122,12 @@ function loadData() {
     updateGrandTotal();
 }
 
-// --- محاسبات ---
 function updateGrandTotal() {
     let grandTotal = 0;
     document.querySelectorAll('.priceBox').forEach(box => {
-        // اول کاماها را حذف می‌کنیم تا بتوانیم جمع بزنیم
         const rawValue = unformatPrice(box.value);
         grandTotal += parseFloat(rawValue) || 0; 
     });
-    // حالا جمع کل را با فرمت فارسی و جداکننده نشان می‌دهیم
     document.getElementById('totalAmount').textContent = grandTotal.toLocaleString('fa-IR') + " تومان";
 }
 
@@ -156,31 +148,28 @@ function calculateTotal(rowElement) {
     let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
     if (diff < 0) diff += 1440; 
 
-    const resultPrice = Math.round((diff / 60) * rate); // محاسبه قیمت
+    const resultPrice = Math.round((diff / 60) * rate);
     rowElement.querySelector('.priceBox').value = formatPrice(resultPrice); 
     saveData();
 }
 
-// --- مدیریت ردیف‌ها و تایمر ---
 function addRow(data = {}) {
     const tableBody = document.querySelector("#gameTable tbody");
     const rowId = data.id || `row-${Date.now()}`;
     const row = document.createElement("tr");
     row.dataset.rowId = rowId;
     
-    // مقادیر پیش‌فرض همراه با چک کردن وضعیت ارسال شده
     const rowData = { 
         name: '', 
-        tvNum: '', // پیش‌فرض خالی گذاشتم تا متصدی مجبور به انتخاب شود
+        tvNum: '', 
         controller: '4', 
         price: '0', 
         paymentType: 'cash', 
         isRunning: false,
-        isSent: false, // اضافه شدن وضعیت ارسال
+        isSent: false, 
         ...data 
     };
 
-    // در اینجا قیمت را قبل از نمایش فرمت می‌کنیم
     const formattedPrice = formatPrice(rowData.price);
 
     row.innerHTML = `
@@ -217,14 +206,12 @@ function addRow(data = {}) {
         <td data-label="عملیات"><button class="delete-button" onclick="deleteRow(this.closest('tr'))">حذف</button></td>
     `;
     
-    // ذخیره مقادیر در دیتای ردیف برای استفاده در محاسبات
     row.dataset.startTime = rowData.startTime || '';
     row.dataset.endTime = rowData.endTime || '';
     row.dataset.isRunning = rowData.isRunning;
     row.dataset.startTimestamp = rowData.startTimestamp || '';
-    row.dataset.isSent = rowData.isSent; // ذخیره وضعیت ارسال
+    row.dataset.isSent = rowData.isSent; 
 
-    // اگر قبلاً ارسال شده، ردیف را کمرنگ نشان بده
     if(rowData.isSent) {
         row.style.opacity = "0.5";
         row.style.backgroundColor = "#f0f0f0";
@@ -239,7 +226,6 @@ function handleTimer(rowElement) {
     if (rowElement.dataset.isRunning === 'true') {
         stopStopwatch(rowElement);
     } else {
-        // قبل از شروع، چک می‌کنیم که حتما شماره TV انتخاب شده باشد
         const tvNum = rowElement.querySelector('.tv-number').value;
         if (!tvNum) {
             alert("لطفاً ابتدا شماره تلویزیون را انتخاب کنید.");
@@ -295,10 +281,10 @@ async function sendToGoogleSheet() {
     const operator = document.getElementById('operatorName').value;
     if(!operator) { alert("لطفاً نام متصدی را وارد کنید"); return; }
 
-    const rowsToSend = getRowData(); // ردیف‌های فیلتر شده
+    const rowsToSend = getRowData(); 
 
     if (rowsToSend.length === 0) {
-        alert("مورد جدیدی برای ارسال وجود ندارد (یا بازی‌ها هنوز تمام نشده‌اند).");
+        alert("مورد جدیدی برای ارسال وجود ندارد.");
         return;
     }
 
@@ -320,18 +306,17 @@ async function sendToGoogleSheet() {
             body: JSON.stringify(data)
         });
 
-        // --- اصلاحیه: علامت‌گذاری ردیف‌های ارسال شده ---
         rowsToSend.forEach(sentRow => {
             const rowElement = document.querySelector(`tr[data-row-id="${sentRow.id}"]`);
             if (rowElement) {
-                rowElement.dataset.isSent = 'true'; // علامت در دیتای زنده
-                rowElement.style.opacity = "0.6"; // کمرنگ کردن برای تشخیص بصری
+                rowElement.dataset.isSent = 'true';
+                rowElement.style.opacity = "0.6"; 
                 rowElement.querySelector('.delete-button').textContent = "ارسال شد ✅";
             }
         });
 
-        saveData(); // ذخیره وضعیت جدید در LocalStorage
-        alert(`${rowsToSend.length} مورد با موفقیت به دفتر آنلاین ارسال شد!`);
+        saveData(); 
+        alert(`${rowsToSend.length} مورد با موفقیت به پایگاه داده ارسال شد!`);
         
     } catch (e) {
         console.error(e);
@@ -368,23 +353,19 @@ function deleteRow(row) {
     }
 }
 
-// --- بخش اجرایی و فعال‌سازی تقویم (اصلاح شده) ---
 document.addEventListener('DOMContentLoaded', () => {
-    // ۱. لود کردن داده‌های ذخیره شده
     loadData();
 
-    // ۲. فعال‌سازی تقویم شمسی روی فیلد تاریخ
     if (window.jQuery && $.fn.persianDatepicker) {
         $("#todayDate").persianDatepicker({
             format: 'YYYY/MM/DD',
             autoClose: true,
             onSelect: function() {
-                saveData(); // ذخیره خودکار بعد از انتخاب تاریخ
+                saveData(); 
             }
         });
     }
 
-    // ۳. تنظیم رویداد دکمه‌ها
     document.getElementById("addRowBtn").onclick = () => { 
         addRow(); 
         saveData(); 
@@ -409,12 +390,10 @@ function checkDuplicateTV(selectElement) {
     let isDuplicate = false;
 
     allRows.forEach(row => {
-        // اگر این ردیف، همان ردیفی نباشد که داریم تغییرش می‌دهیم
         if (row !== currentRow) {
             const tvNum = row.querySelector('.tv-number').value;
             const isRunning = row.dataset.isRunning === 'true';
 
-            // اگر شماره TV یکی بود و آن دستگاه هم در حال بازی بود
             if (tvNum === selectedTV && isRunning) {
                 isDuplicate = true;
             }
@@ -422,10 +401,10 @@ function checkDuplicateTV(selectElement) {
     });
 
     if (isDuplicate) {
-        alert("خطا: این تلویزیون در حال حاضر توسط مشتری دیگری اشغال شده است!");
-        selectElement.value = ""; // مقدار را ریست کن
+        alert("خطا: این تلویزیون در دسترس نیست!");
+        selectElement.value = "";
     } else {
-        saveData(); // اگر مشکلی نبود ذخیره کن
+        saveData(); 
     }
 }
 
@@ -433,15 +412,50 @@ function checkDuplicateTV(selectElement) {
 const menuBtn = document.getElementById('menuToggleBtn');
 const optionsMenu = document.getElementById('optionsMenu');
 
-// باز و بسته کردن منو با کلیک روی دکمه
+menuBtn.addEventListener('click' ,(e) => {
+    optionsMenu.classList
+})
 menuBtn.addEventListener('click', (e) => {
     optionsMenu.classList.toggle('show');
-    e.stopPropagation(); // جلوگیری از بسته شدن بلافاصله
+    e.stopPropagation(); 
 });
 
-// بستن منو در صورتی که کاربر جای دیگری از صفحه کلیک کند
 window.addEventListener('click', () => {
     if (optionsMenu.classList.contains('show')) {
         optionsMenu.classList.remove('show');
     }
 });
+
+
+document.addEventListener('DOMContentLoaded', function() {
+        const btn = document.getElementById('menuToggleBtn');
+        const menu = document.getElementById('optionsMenu');
+
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation(); 
+            menu.classList.toggle('show-menu');
+        });
+
+        document.addEventListener('click', function(event) {
+            if (!menu.contains(event.target) && event.target !== btn) {
+                menu.classList.remove('show-menu');
+            }
+        });
+    });
+
+
+ window.addEventListener('load', () => {
+        const splash = document.getElementById('splash-screen');
+        const main = document.getElementById('main-content');
+
+        setTimeout(() => {
+            // محو کردن صفحه به نام خدا
+            splash.style.opacity = '0';
+            
+            setTimeout(() => {
+                splash.style.display = 'none'; // حذف کامل از صفحه
+                main.style.display = 'block'; // نمایش سایت اصلی
+            }, 1000); // زمان انیمیشن محو شدن
+            
+        }, 2000); // مدت زمان نمایش "به نام خدا" (۳ ثانیه)
+    });
