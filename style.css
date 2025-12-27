@@ -17,13 +17,10 @@ body {
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     
     display: flex;
-    flex-direction: column; /* ۱. این خط باعث می‌شود اسم و تاریخ زیر هم بیایند */
-    align-items: stretch;    /* ۲. باعث می‌شود اینپوت‌ها کل عرض باکس را بگیرند */
+    flex-direction: column; /* در موبایل زیر هم */
     gap: 15px;
     direction: rtl;
-    
-    /* ۳. خیلی مهم: overflow: hidden را حذف کردم تا تقویم وقتی باز می‌شود غیب نشود */
-    position: relative; /* ۴. برای اینکه تقویم نسبت به این باکس موقعیت‌دهی شود */
+    /* overflow: hidden حذف شد تا تقویم قطع نشود */
 }
 
 input, select, textarea { 
@@ -283,5 +280,17 @@ body, input, button, textarea, select, optgroup {
 @media (max-width: 768px) {
     .banner-container {
         height: 250px; /* ارتفاع کمتر برای موبایل */
+    }
+}
+
+@media screen and (min-width: 769px) {
+    .top-box {
+        flex-direction: row; /* در دسکتاپ کنار هم */
+        align-items: flex-end; /* تراز شدن در خط پایین */
+        justify-content: flex-start;
+    }
+    
+    .top-box > div {
+        flex: 1; /* باعث می‌شود اسم و تاریخ فضای مساوی بگیرند */
     }
 }
