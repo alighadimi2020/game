@@ -128,9 +128,11 @@ function updateGrandTotal() {
         const rawValue = unformatPrice(box.value);
         grandTotal += parseFloat(rawValue) || 0; 
     });
-    document.getElementById('totalAmount').textContent = grandTotal.toLocaleString('fa-IR') + " تومان";
+    const totalDisplay = document.getElementById('totalAmount');
+    if(totalDisplay) {
+        totalDisplay.textContent = grandTotal.toLocaleString('fa-IR') + " تومان";
+    }
 }
-
 function getHourlyRate(controllers) {
     const rates = { '1': 80000, '2': 140000, '3': 165000, '4': 220000 };
     return rates[controllers] || 0;
@@ -159,25 +161,24 @@ function addRow(data = {}) {
     const row = document.createElement("tr");
     row.dataset.rowId = rowId;
     
-    const rowData = { 
-        name: '', 
-        tvNum: '', 
-        controller: '4', 
-        price: '0', 
-        paymentType: 'cash', 
-        isRunning: false,
-        isSent: false, 
-        ...data 
+    // قابلیت کلیک برای جمع شدن
+    row.onclick = function(e) {
+        if (['INPUT', 'SELECT', 'BUTTON'].includes(e.target.tagName)) return;
+        this.classList.toggle('collapsed');
     };
 
-    const formattedPrice = formatPrice(rowData.price);
+    const rowData = { 
+        name: '', tvNum: '', controller: '4', price: '0', 
+        paymentType: 'cash', isRunning: false, isSent: false, 
+        startTime: '', endTime: '', ...data 
+    };
 
     row.innerHTML = `
         <td data-label="نام"><input type="text" class="person-name" value="${rowData.name}" onchange="saveData(); updateNoteHeader(this.closest('tr'));"></td> 
-        <td data-label="TV">
+        <td data-label="TV" class="tv-cell">
             <select class="tv-number" onchange="checkDuplicateTV(this); updateNoteHeader(this.closest('tr'));">
-                <option value="">انتخاب...</option>
-                ${[1,2,3,4,5].map(n => `<option value="${n}" ${rowData.tvNum == n ? 'selected' : ''}>${n}</option>`).join('')}
+                <option value="">...</option>
+                ${[1,2,3,4,5,6,7,8].map(n => `<option value="${n}" ${rowData.tvNum == n ? 'selected' : ''}>${n}</option>`).join('')}
             </select>
         </td>
         <td data-label="دسته">
@@ -194,9 +195,13 @@ function addRow(data = {}) {
             </button>
             <div class="duration-display">${rowData.isRunning ? '...' : '00:00:00'}</div>
         </td>
-        <td data-label="شروع" class="display-start-time">${rowData.startTime || '---'}</td>
-        <td data-label="پایان" class="display-end-time">${rowData.endTime || '---'}</td>
-        <td data-label="قیمت"><input class="priceBox" type="text" readonly value="${formattedPrice}"></td>
+        <td data-label="شروع">
+            <input type="time" class="start-time-input" value="${rowData.startTime}" onchange="manualTimeChange(this.closest('tr'))">
+        </td>
+        <td data-label="پایان">
+            <input type="time" class="end-time-input" value="${rowData.endTime}" onchange="manualTimeChange(this.closest('tr'))">
+        </td>
+        <td data-label="قیمت"><input class="priceBox" type="text" readonly value="${formatPrice(rowData.price)}"></td>
         <td data-label="پرداخت">
             <select class="payment-type" onchange="saveData()">
                 <option value="cash" ${rowData.paymentType == 'cash' ? 'selected' : ''}>نقد</option>
@@ -206,20 +211,19 @@ function addRow(data = {}) {
         <td data-label="عملیات"><button class="delete-button" onclick="deleteRow(this.closest('tr'))">حذف</button></td>
     `;
     
-    row.dataset.startTime = rowData.startTime || '';
-    row.dataset.endTime = rowData.endTime || '';
     row.dataset.isRunning = rowData.isRunning;
-    row.dataset.startTimestamp = rowData.startTimestamp || '';
     row.dataset.isSent = rowData.isSent; 
-
-    if(rowData.isSent) {
-        row.style.opacity = "0.5";
-        row.style.backgroundColor = "#f0f0f0";
-    }
-
     tableBody.appendChild(row);
     createNoteBox(rowId, rowData);
     updateGrandTotal();
+}
+
+// تابع جدید برای مدیریت تغییر دستی زمان
+function manualTimeChange(rowElement) {
+    rowElement.dataset.startTime = rowElement.querySelector('.start-time-input').value;
+    rowElement.dataset.endTime = rowElement.querySelector('.end-time-input').value;
+    calculateTotal(rowElement);
+    saveData();
 }
 
 function handleTimer(rowElement) {
@@ -227,8 +231,10 @@ function handleTimer(rowElement) {
         stopStopwatch(rowElement);
     } else {
         const tvNum = rowElement.querySelector('.tv-number').value;
-        if (!tvNum) {
-            alert("لطفاً ابتدا شماره تلویزیون را انتخاب کنید.");
+        const personName = rowElement.querySelector('.person-name').value;
+
+        if (!tvNum || !personName) {
+            alert("لطفاً ابتدا نام مشتری و شماره تلویزیون را وارد کنید.");
             return;
         }
         startStopwatch(rowElement);
@@ -241,10 +247,27 @@ function startStopwatch(rowElement, isRecovery = false) {
     const now = new Date();
     
     if (!isRecovery) {
-        rowElement.dataset.startTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        const startTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        rowElement.dataset.startTime = startTime;
+        rowElement.querySelector('.start-time-input').value = startTime;
         rowElement.dataset.startTimestamp = now.getTime();
         rowElement.dataset.isRunning = 'true';
-        rowElement.querySelector('.display-start-time').textContent = rowElement.dataset.startTime;
+
+        // اطلاع به گوگل شیت برای شروع بازی (برای سینک شدن با بقیه متصدی‌ها)
+        const data = {
+            action: "start",
+            rowId: rowId,
+            name: rowElement.querySelector('.person-name').value,
+            tvNum: rowElement.querySelector('.tv-number').value,
+            startTime: startTime,
+            operator: document.getElementById('operatorName').value
+        };
+        
+        fetch(SCRIPT_URL, { 
+            method: 'POST', 
+            mode: 'no-cors',
+            body: JSON.stringify(data) 
+        });
     }
 
     rowElement.querySelector('.stop-button').textContent = 'اتمام';
@@ -255,20 +278,36 @@ function startStopwatch(rowElement, isRecovery = false) {
     }, 1000);
     saveData();
 }
-
 function stopStopwatch(rowElement) {
     const rowId = rowElement.dataset.rowId;
     clearInterval(rowTimers[rowId]);
     
     const now = new Date();
-    rowElement.dataset.endTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-    rowElement.querySelector('.display-end-time').textContent = rowElement.dataset.endTime;
+    const endTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    
+    rowElement.querySelector('.end-time-input').value = endTime;
+    rowElement.dataset.endTime = endTime;
+    
     rowElement.dataset.isRunning = 'false';
     rowElement.querySelector('.stop-button').textContent = 'تمام شده';
     rowElement.querySelector('.stop-button').disabled = true;
 
     calculateTotal(rowElement);
     saveData();
+
+    // اطلاع به گوگل شیت برای اتمام بازی و آرشیو شدن
+    const data = {
+        action: "end",
+        rowId: rowId,
+        endTime: endTime,
+        price: rowElement.querySelector('.priceBox').value
+    };
+    
+    fetch(SCRIPT_URL, { 
+        method: 'POST', 
+        mode: 'no-cors', // برای جلوگیری از خطای CORS در گوگل اسکریپت
+        body: JSON.stringify(data) 
+    });
 }
 
 function formatDuration(ms) {
@@ -459,3 +498,36 @@ document.addEventListener('DOMContentLoaded', function() {
             
         }, 2000); // مدت زمان نمایش "به نام خدا" (۳ ثانیه)
     });
+
+    // این تابع لیست دستگاه‌های روشن را از گوگل شیت می‌گیرد
+async function fetchActiveFromSheet() {
+    try {
+        const response = await fetch(SCRIPT_URL); // درخواست به گوگل شیت
+        const actives = await response.json();    // دریافت لیست روشن‌ها
+        
+        actives.forEach(item => {
+            // چک کن: اگر این دستگاه در صفحه متصدی دوم نیست، اضافه‌اش کن
+            const existingRow = document.querySelector(`tr[data-row-id="${item.rowId}"]`);
+            if (!existingRow) {
+                addRow({
+                    id: item.rowId,
+                    name: item.name,
+                    tvNum: item.tvNum,
+                    startTime: item.startTime,
+                    isRunning: true,
+                    // زمان شروع واقعی را برای محاسبه کرونومتر استفاده می‌کنیم
+                    startTimestamp: new Date().setHours(item.startTime.split(':')[0], item.startTime.split(':')[1])
+                });
+                
+                // فعال کردن کرونومتر برای ردیف جدید
+                const newRow = document.querySelector(`tr[data-row-id="${item.rowId}"]`);
+                startStopwatch(newRow, true); // true یعنی فقط نمایش بده، دوباره به شیت پیام نزن
+            }
+        });
+    } catch (e) {
+        console.log("در حال چک کردن تغییرات جدید...");
+    }
+}
+
+// هر 30 ثانیه یکبار به صورت خودکار چک کن
+setInterval(fetchActiveFromSheet, 30000);
