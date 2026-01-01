@@ -13,75 +13,69 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/samim-font@v4.0.5/dist/font-face.css" rel="stylesheet" type="text/css" />
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
-    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/iran-nastaliq-font@v1.0.0/dist/font-face.css" rel="stylesheet" type="text/css" />
-
+</head>
 <body>
     <div id="splash-screen">
-    <h1 class="bismillah">مدیریت دفتری بازی سرا</h1>
+        <h1 class="bismillah">مدیریت دفتری بازی سرا</h1>
     </div>
 
+    <div class="banner-container">
+        <img src="game.jpeg" alt="گیمنت بنر" class="main-banner">
+    </div>
 
-<div class="banner-container">
-    <img src="game.jpeg" alt="گیمنت بنر" class="main-banner">
-</div>
+    <div class="top-box">
+        <label for="operatorName">متصدی:</label>
+        <input type="text" id="operatorName" style="width: 100px; height: 40px; margin-left: 30px;">
 
-<div class="top-box">
-    <label for="operatorName">متصدی:</label>
-    <input type="text" id="operatorName" style="width: 100px; height: 40px; margin-left: 30px;">
-
-    <label for="todayDate" >تاریخ:</label>
-    <input type="text" id="todayDate" style="width: 100px; height: 40px;">
-</div>
-    
-<div id="pdfContent">
-    <div class="table-container">
-        <table id="gameTable">
-            <thead style="font-family: Vazirmatn ;">
-                <tr>
-                    <th>نام</th> 
-                    <th>TV</th>
-                    <th>دسته</th>
-                    <th>زمان</th> 
-                    <th>زمان شروع</th> 
-                    <th>زمان پایان</th>
-                    <th>قیمت کل</th> 
-                    <th>نوع پرداخت</th> 
-                    <th>حذف</th> 
-                </tr>
-            </thead>
-            <tbody>
+        <label for="todayDate" >تاریخ:</label>
+        <input type="text" id="todayDate" style="width: 100px; height: 40px;">
+    </div>
+        
+    <div id="pdfContent">
+        <div class="table-container">
+            <table id="gameTable">
+                <thead>
+                    <tr>
+                        <th>نام</th> 
+                        <th>TV</th>
+                        <th>دسته</th>
+                        <th>زمان</th> 
+                        <th>زمان شروع</th> 
+                        <th>زمان پایان</th>
+                        <th>قیمت کل</th> 
+                        <th>نوع پرداخت</th> 
+                        <th>حذف</th> 
+                    </tr>
+                </thead>
+                <tbody>
                 </tbody>
-            <tfoot id="grandTotalRow">
-                <tr>
-                    <td colspan="6" style="text-align: right;">مجموع کل برای امروز:</td> 
-                    <td id="totalAmount" colspan="2">0</td>
-                </tr>
-            </tfoot>
-        </table>
+            </table>
+        </div>
     </div>
-</div>
 
-<div class="menu-container">
-    <button id="menuToggleBtn" class="menu-dots-btn">
-        <span>⋮</span> <b>ابزارها</b>
-    </button>
-    
-    <div id="optionsMenu" class="dropdown-content">
-        <button id="addRowBtn" style="background-color: rgb(45, 67, 166); color: rgb(255, 255, 255);">➕ اضافه کردن سطر</button>
-        <button id="submitToSheetBtn" style="background-color: #acedbb; color: rgb(0, 0, 0);">🚀 ارسال به گوگل شیت</button>
-        <button id="refreshBtn" style="background-color: #a2e7ef; color: rgb(0, 0, 0);">پاک کردن همهٔ داده‌ها</button>
+    <div class="menu-container">
+        <button id="menuToggleBtn" class="menu-dots-btn">
+            <span>⋮</span> <b>ابزارها</b>
+        </button>
+        
+        <div id="optionsMenu" class="dropdown-content">
+            <div id="totalSection" style="padding: 10px; background: #f0f4f8; border-radius: 8px; margin-bottom: 10px; text-align: center; border: 1px solid #ddd;">
+                <span style="font-weight: bold;">مجموع روز: </span>
+                <span id="totalAmount" style="color: #27ae60; font-weight: bold;">0 تومان</span>
+            </div>
+
+            <button id="addRowBtn" style="background-color: rgb(45, 67, 166); color: white;">➕ اضافه کردن سطر</button>
+            <button id="submitToSheetBtn" style="background-color: #acedbb; color: black;">🚀 ارسال به گوگل شیت</button>
+            <button onclick="window.location.href='index2.html'" style="background-color: #ffd700; color: black;">📋 صفحه مدیریت ثانویه</button>
+            <button id="refreshBtn" style="background-color: #a2e7ef; color: black;">پاک کردن همهٔ داده‌ها</button>
+        </div>
     </div>
-</div>
 
-<div id="notes-container">
-    <h3>توضیحات سطرها</h3>
-    <div id="notes-list"></div>
-</div>
+    <div id="notes-container">
+        <h3>توضیحات سطرها</h3>
+        <div id="notes-list"></div>
+    </div>
 
-
-<script src="main.js"></script>
-
-
-
+    <script src="main.js"></script>
 </body>
 </html>
