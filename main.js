@@ -1,7 +1,8 @@
 const rowTimers = {}; 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwddG1JF1oGAVf75Q3ZU7yhw6bsJX2-bG-4ydidO4wa7RrAOeNb1KcHEs3oY-rxrg_MQA/exec"; 
 
-// --- بخش تبدیل تاریخ و فرمت‌دهی (بدون تغییر) ---
+
+
 function formatPrice(number) {
     if (!number) return "0";
     return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -10,6 +11,7 @@ function formatPrice(number) {
 function unformatPrice(string) {
     return string.toString().replace(/,/g, '');
 }
+
 
 function toJalali(gy, gm, gd) {
     var g_days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
@@ -39,7 +41,33 @@ function getShamsiDate() {
     return toJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
 }
 
-// --- مدیریت داده‌ها و LocalStorage ---
+function getRowData() {
+    const rows = [];
+    document.querySelectorAll('#gameTable tbody tr').forEach(row => {
+        const rowId = row.dataset.rowId; 
+        const noteElement = document.getElementById(`note-${rowId}`);
+        
+        const isRunning = row.dataset.isRunning === 'true';
+        const endTime = row.dataset.endTime || '';
+        const isAlreadySent = row.dataset.isSent === 'true'; 
+
+        if (!isRunning && endTime !== '' && !isAlreadySent) {
+            rows.push({
+                id: rowId,
+                name: row.querySelector('.person-name').value,
+                tvNum: row.querySelector('.tv-number').value,
+                controller: row.querySelector('.controller-select').value,
+                startTime: row.dataset.startTime || '', 
+                endTime: endTime, 
+                price: row.querySelector('.priceBox').value,
+                paymentType: row.querySelector('.payment-type').value,
+                notes: noteElement ? noteElement.value : '',
+            });
+        }
+    });
+    return rows;
+}
+
 function saveData() {
     const allRows = [];
     document.querySelectorAll('#gameTable tbody tr').forEach(row => {
@@ -80,6 +108,10 @@ function loadData() {
     document.getElementById('operatorName').value = data.operatorName || '';
     document.getElementById('todayDate').value = data.todayDate || getShamsiDate();
 
+    const tableBody = document.querySelector("#gameTable tbody");
+    tableBody.innerHTML = ''; 
+    document.getElementById("notes-list").innerHTML = ''; 
+
     data.rows.forEach(rowData => {
         addRow(rowData);
         if (rowData.isRunning) {
@@ -87,9 +119,20 @@ function loadData() {
             if (rowElement) startStopwatch(rowElement, true);
         }
     });
+    updateGrandTotal();
 }
 
-// --- منطق اصلی بازی و قیمت ---
+function updateGrandTotal() {
+    let grandTotal = 0;
+    document.querySelectorAll('.priceBox').forEach(box => {
+        const rawValue = unformatPrice(box.value);
+        grandTotal += parseFloat(rawValue) || 0; 
+    });
+    const totalDisplay = document.getElementById('totalAmount');
+    if(totalDisplay) {
+        totalDisplay.textContent = grandTotal.toLocaleString('fa-IR') + " تومان";
+    }
+}
 function getHourlyRate(controllers) {
     const rates = { '1': 80000, '2': 140000, '3': 165000, '4': 220000 };
     return rates[controllers] || 0;
@@ -99,11 +142,14 @@ function calculateTotal(rowElement) {
     const rate = getHourlyRate(rowElement.querySelector('.controller-select').value);
     const start = rowElement.dataset.startTime;
     const end = rowElement.dataset.endTime;
+
     if (!start || !end || rate === 0) return;
+
     const [h1, m1] = start.split(':').map(Number);
     const [h2, m2] = end.split(':').map(Number);
     let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
     if (diff < 0) diff += 1440; 
+
     const resultPrice = Math.round((diff / 60) * rate);
     rowElement.querySelector('.priceBox').value = formatPrice(resultPrice); 
     saveData();
@@ -112,10 +158,10 @@ function calculateTotal(rowElement) {
 function addRow(data = {}) {
     const tableBody = document.querySelector("#gameTable tbody");
     const rowId = data.id || `row-${Date.now()}`;
-    if (document.querySelector(`tr[data-row-id="${rowId}"]`)) return;
-
     const row = document.createElement("tr");
     row.dataset.rowId = rowId;
+    
+    // قابلیت کلیک برای جمع شدن
     row.onclick = function(e) {
         if (['INPUT', 'SELECT', 'BUTTON'].includes(e.target.tagName)) return;
         this.classList.toggle('collapsed');
@@ -129,7 +175,7 @@ function addRow(data = {}) {
 
     row.innerHTML = `
         <td data-label="نام"><input type="text" class="person-name" value="${rowData.name}" onchange="saveData(); updateNoteHeader(this.closest('tr'));"></td> 
-        <td data-label="TV">
+        <td data-label="TV" class="tv-cell">
             <select class="tv-number" onchange="checkDuplicateTV(this); updateNoteHeader(this.closest('tr'));">
                 <option value="">...</option>
                 ${[1,2,3,4,5,6,7,8].map(n => `<option value="${n}" ${rowData.tvNum == n ? 'selected' : ''}>${n}</option>`).join('')}
@@ -144,11 +190,17 @@ function addRow(data = {}) {
             </select>
         </td>
         <td data-label="زمان">
-            <button class="stop-button" onclick="handleTimer(this.closest('tr'))">${rowData.isRunning ? 'اتمام' : 'شروع'}</button>
-            <div class="duration-display">00:00:00</div>
+            <button class="stop-button" onclick="handleTimer(this.closest('tr'))" ${rowData.isSent ? 'disabled' : ''}>
+                ${rowData.isSent ? 'ارسال شده' : (rowData.isRunning ? 'اتمام' : 'شروع')}
+            </button>
+            <div class="duration-display">${rowData.isRunning ? '...' : '00:00:00'}</div>
         </td>
-        <td data-label="شروع"><input type="time" class="start-time-input" value="${rowData.startTime}" onchange="manualTimeChange(this.closest('tr'))"></td>
-        <td data-label="پایان"><input type="time" class="end-time-input" value="${rowData.endTime}" onchange="manualTimeChange(this.closest('tr'))"></td>
+        <td data-label="شروع">
+            <input type="time" class="start-time-input" value="${rowData.startTime}" onchange="manualTimeChange(this.closest('tr'))">
+        </td>
+        <td data-label="پایان">
+            <input type="time" class="end-time-input" value="${rowData.endTime}" onchange="manualTimeChange(this.closest('tr'))">
+        </td>
         <td data-label="قیمت"><input class="priceBox" type="text" readonly value="${formatPrice(rowData.price)}"></td>
         <td data-label="پرداخت">
             <select class="payment-type" onchange="saveData()">
@@ -160,11 +212,18 @@ function addRow(data = {}) {
     `;
     
     row.dataset.isRunning = rowData.isRunning;
-    row.dataset.startTime = rowData.startTime;
-    row.dataset.startTimestamp = rowData.startTimestamp || '';
+    row.dataset.isSent = rowData.isSent; 
     tableBody.appendChild(row);
     createNoteBox(rowId, rowData);
     updateGrandTotal();
+}
+
+// تابع جدید برای مدیریت تغییر دستی زمان
+function manualTimeChange(rowElement) {
+    rowElement.dataset.startTime = rowElement.querySelector('.start-time-input').value;
+    rowElement.dataset.endTime = rowElement.querySelector('.end-time-input').value;
+    calculateTotal(rowElement);
+    saveData();
 }
 
 function handleTimer(rowElement) {
@@ -173,10 +232,15 @@ function handleTimer(rowElement) {
     } else {
         const tvNum = rowElement.querySelector('.tv-number').value;
         const personName = rowElement.querySelector('.person-name').value;
-        if (!tvNum || !personName) { alert("نام و شماره TV را وارد کنید."); return; }
+
+        if (!tvNum || !personName) {
+            alert("لطفاً ابتدا نام مشتری و شماره تلویزیون را وارد کنید.");
+            return;
+        }
         startStopwatch(rowElement);
     }
 }
+
 
 function startStopwatch(rowElement, isRecovery = false) {
     const rowId = rowElement.dataset.rowId;
@@ -189,31 +253,31 @@ function startStopwatch(rowElement, isRecovery = false) {
         rowElement.dataset.startTimestamp = now.getTime();
         rowElement.dataset.isRunning = 'true';
 
-        // اطلاع سریع به گوگل شیت
+        // اطلاع به گوگل شیت برای شروع بازی (برای سینک شدن با بقیه متصدی‌ها)
+        const data = {
+            action: "start",
+            rowId: rowId,
+            name: rowElement.querySelector('.person-name').value,
+            tvNum: rowElement.querySelector('.tv-number').value,
+            startTime: startTime,
+            operator: document.getElementById('operatorName').value
+        };
+        
         fetch(SCRIPT_URL, { 
             method: 'POST', 
             mode: 'no-cors',
-            body: JSON.stringify({
-                action: "start",
-                rowId: rowId,
-                name: rowElement.querySelector('.person-name').value,
-                tvNum: rowElement.querySelector('.tv-number').value,
-                startTime: startTime,
-                operator: document.getElementById('operatorName').value
-            }) 
+            body: JSON.stringify(data) 
         });
     }
 
     rowElement.querySelector('.stop-button').textContent = 'اتمام';
     
-    // اجرای کرونومتر
     rowTimers[rowId] = setInterval(() => {
         const elapsed = new Date().getTime() - parseInt(rowElement.dataset.startTimestamp);
         rowElement.querySelector('.duration-display').textContent = formatDuration(elapsed);
     }, 1000);
     saveData();
 }
-
 function stopStopwatch(rowElement) {
     const rowId = rowElement.dataset.rowId;
     clearInterval(rowTimers[rowId]);
@@ -223,6 +287,7 @@ function stopStopwatch(rowElement) {
     
     rowElement.querySelector('.end-time-input').value = endTime;
     rowElement.dataset.endTime = endTime;
+    
     rowElement.dataset.isRunning = 'false';
     rowElement.querySelector('.stop-button').textContent = 'تمام شده';
     rowElement.querySelector('.stop-button').disabled = true;
@@ -230,85 +295,79 @@ function stopStopwatch(rowElement) {
     calculateTotal(rowElement);
     saveData();
 
-    // اطلاع به شیت برای اتمام و ثبت قیمت
+    // اطلاع به گوگل شیت برای اتمام بازی و آرشیو شدن
+    const data = {
+        action: "end",
+        rowId: rowId,
+        endTime: endTime,
+        price: rowElement.querySelector('.priceBox').value
+    };
+    
     fetch(SCRIPT_URL, { 
         method: 'POST', 
-        mode: 'no-cors',
-        body: JSON.stringify({
-            action: "end",
-            rowId: rowId,
-            endTime: endTime,
-            price: rowElement.querySelector('.priceBox').value
-        }) 
+        mode: 'no-cors', // برای جلوگیری از خطای CORS در گوگل اسکریپت
+        body: JSON.stringify(data) 
     });
 }
 
-// --- سیستم هماهنگی خودکار ---
-async function syncWithServer() {
-    try {
-        const response = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
-        const actives = await response.json();
-        
-        // ۱. اضافه کردن ردیف‌های جدیدی که در این دستگاه نیستند
-        actives.forEach(item => {
-            const existingRow = document.querySelector(`tr[data-row-id="${item.rowId}"]`);
-            if (!existingRow) {
-                const now = new Date();
-                const [h, m] = item.startTime.split(':');
-                // اصلاح مهم: ساخت دقیق Timestamp برای جلوگیری از NaN
-                const startTS = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(h), parseInt(m), 0).getTime();
-
-                addRow({
-                    id: item.rowId,
-                    name: item.name,
-                    tvNum: item.tvNum,
-                    startTime: item.startTime,
-                    isRunning: true,
-                    startTimestamp: startTS
-                });
-                const newRow = document.querySelector(`tr[data-row-id="${item.rowId}"]`);
-                startStopwatch(newRow, true);
-            }
-        });
-
-        // ۲. غیرفعال کردن ردیف‌هایی که در دستگاه‌های دیگر "اتمام" شده‌اند
-        const allLocalRows = document.querySelectorAll('#gameTable tbody tr');
-        allLocalRows.forEach(localRow => {
-            if (localRow.dataset.isRunning === 'true') {
-                const isStillActive = actives.find(a => a.rowId === localRow.dataset.rowId);
-                if (!isStillActive) {
-                    // اگر در شیت نبود، یعنی متصدی دیگر اتمام را زده
-                    clearInterval(rowTimers[localRow.dataset.rowId]);
-                    localRow.dataset.isRunning = 'false';
-                    localRow.querySelector('.stop-button').textContent = 'اتمام در دستگاه دیگر';
-                    localRow.querySelector('.stop-button').disabled = true;
-                    localRow.style.opacity = "0.7";
-                }
-            }
-        });
-    } catch (e) { console.log("در حال هماهنگ‌سازی..."); }
-}
-
-// --- توابع کمکی رابط کاربری ---
 function formatDuration(ms) {
-    if (isNaN(ms) || ms < 0) return "00:00:00";
     const s = Math.floor(ms / 1000);
-    const hours = Math.floor(s / 3600).toString().padStart(2, '0');
-    const minutes = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
-    const seconds = (s % 60).toString().padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
+    return `${Math.floor(s/3600).toString().padStart(2,'0')}:${Math.floor((s%3600)/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
 }
 
-function updateGrandTotal() {
-    let grandTotal = 0;
-    document.querySelectorAll('.priceBox').forEach(box => { grandTotal += parseFloat(unformatPrice(box.value)) || 0; });
-    const totalDisplay = document.getElementById('totalAmount');
-    if(totalDisplay) totalDisplay.textContent = grandTotal.toLocaleString('fa-IR') + " تومان";
+async function sendToGoogleSheet() {
+    const btn = document.getElementById('submitToSheetBtn');
+    const operator = document.getElementById('operatorName').value;
+    if(!operator) { alert("لطفاً نام متصدی را وارد کنید"); return; }
+
+    const rowsToSend = getRowData(); 
+
+    if (rowsToSend.length === 0) {
+        alert("مورد جدیدی برای ارسال وجود ندارد.");
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "در حال ارسال...";
+
+    const data = {
+        operator: operator,
+        date: document.getElementById('todayDate').value,
+        rows: rowsToSend
+    };
+
+    try {
+        await fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            cache: 'no-cache',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        rowsToSend.forEach(sentRow => {
+            const rowElement = document.querySelector(`tr[data-row-id="${sentRow.id}"]`);
+            if (rowElement) {
+                rowElement.dataset.isSent = 'true';
+                rowElement.style.opacity = "0.6"; 
+                rowElement.querySelector('.delete-button').textContent = "ارسال شد ✅";
+            }
+        });
+
+        saveData(); 
+        alert(`${rowsToSend.length} مورد با موفقیت به پایگاه داده ارسال شد!`);
+        
+    } catch (e) {
+        console.error(e);
+        alert("خطا در ارسال.");
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "🚀 ارسال به گوگل شیت";
+    }
 }
 
 function createNoteBox(rowId, rowData) {
     const container = document.getElementById("notes-list");
-    if (document.getElementById(`note-box-${rowId}`)) return;
     const div = document.createElement("div");
     div.className = "row-note-box";
     div.id = `note-box-${rowId}`;
@@ -327,52 +386,175 @@ function updateNoteHeader(row) {
 function deleteRow(row) {
     if(confirm("حذف شود؟")) {
         clearInterval(rowTimers[row.dataset.rowId]);
-        const noteBox = document.getElementById(`note-box-${row.dataset.rowId}`);
-        if(noteBox) noteBox.remove();
+        document.getElementById(`note-box-${row.dataset.rowId}`).remove();
         row.remove();
         saveData();
     }
 }
 
-function manualTimeChange(rowElement) {
-    rowElement.dataset.startTime = rowElement.querySelector('.start-time-input').value;
-    rowElement.dataset.endTime = rowElement.querySelector('.end-time-input').value;
-    calculateTotal(rowElement);
-}
+document.addEventListener('DOMContentLoaded', () => {
+    loadData();
+
+    if (window.jQuery && $.fn.persianDatepicker) {
+        $("#todayDate").persianDatepicker({
+            format: 'YYYY/MM/DD',
+            autoClose: true,
+            onSelect: function() {
+                saveData(); 
+            }
+        });
+    }
+
+    document.getElementById("addRowBtn").onclick = () => { 
+        addRow(); 
+        saveData(); 
+    };
+
+    document.getElementById("refreshBtn").onclick = () => { 
+        if(confirm("کل جدول پاک شود؟")) { 
+            localStorage.clear(); 
+            location.reload(); 
+        } 
+    };
+
+    const sheetBtn = document.getElementById("submitToSheetBtn");
+    if(sheetBtn) sheetBtn.onclick = sendToGoogleSheet;
+});
 
 function checkDuplicateTV(selectElement) {
     const selectedTV = selectElement.value;
     const currentRow = selectElement.closest('tr');
+    const allRows = document.querySelectorAll('#gameTable tbody tr');
+
     let isDuplicate = false;
-    document.querySelectorAll('#gameTable tbody tr').forEach(row => {
-        if (row !== currentRow && row.querySelector('.tv-number').value === selectedTV && row.dataset.isRunning === 'true') isDuplicate = true;
+
+    allRows.forEach(row => {
+        if (row !== currentRow) {
+            const tvNum = row.querySelector('.tv-number').value;
+            const isRunning = row.dataset.isRunning === 'true';
+
+            if (tvNum === selectedTV && isRunning) {
+                isDuplicate = true;
+            }
+        }
     });
-    if (isDuplicate) { alert("خطا: این تلویزیون در دسترس نیست!"); selectElement.value = ""; } else { saveData(); }
+
+    if (isDuplicate) {
+        alert("خطا: این تلویزیون در دسترس نیست!");
+        selectElement.value = "";
+    } else {
+        saveData(); 
+    }
 }
 
-// --- مدیریت رویدادها ---
-document.addEventListener('DOMContentLoaded', () => {
-    loadData();
-    syncWithServer();
-    setInterval(syncWithServer, 30000);
 
-    // اسپلش اسکرین
-    const splash = document.getElementById('splash-screen');
-    if(splash) {
-        setTimeout(() => {
-            splash.style.opacity = '0';
-            setTimeout(() => splash.style.display = 'none', 1000);
-        }, 2000);
-    }
+const menuBtn = document.getElementById('menuToggleBtn');
+const optionsMenu = document.getElementById('optionsMenu');
 
-    // منو
-    const btn = document.getElementById('menuToggleBtn');
-    const menu = document.getElementById('optionsMenu');
-    if(btn && menu) {
-        btn.onclick = (e) => { e.stopPropagation(); menu.classList.toggle('show-menu'); };
-        document.onclick = () => menu.classList.remove('show-menu');
-    }
-
-    document.getElementById("addRowBtn").onclick = () => { addRow(); saveData(); };
-    document.getElementById("refreshBtn").onclick = () => { if(confirm("کل حافظه گوشی پاک شود؟")) { localStorage.clear(); location.reload(); } };
+menuBtn.addEventListener('click' ,(e) => {
+    optionsMenu.classList
+})
+menuBtn.addEventListener('click', (e) => {
+    optionsMenu.classList.toggle('show');
+    e.stopPropagation(); 
 });
+
+window.addEventListener('click', () => {
+    if (optionsMenu.classList.contains('show')) {
+        optionsMenu.classList.remove('show');
+    }
+});
+
+
+document.addEventListener('DOMContentLoaded', function() {
+        const btn = document.getElementById('menuToggleBtn');
+        const menu = document.getElementById('optionsMenu');
+
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation(); 
+            menu.classList.toggle('show-menu');
+        });
+
+        document.addEventListener('click', function(event) {
+            if (!menu.contains(event.target) && event.target !== btn) {
+                menu.classList.remove('show-menu');
+            }
+        });
+    });
+
+
+ window.addEventListener('load', () => {
+        const splash = document.getElementById('splash-screen');
+        const main = document.getElementById('main-content');
+
+        setTimeout(() => {
+            // محو کردن صفحه به نام خدا
+            splash.style.opacity = '0';
+            
+            setTimeout(() => {
+                splash.style.display = 'none'; // حذف کامل از صفحه
+                main.style.display = 'block'; // نمایش سایت اصلی
+            }, 1000); // زمان انیمیشن محو شدن
+            
+        }, 2000); // مدت زمان نمایش "به نام خدا" (۳ ثانیه)
+    });
+
+    // این تابع لیست دستگاه‌های روشن را از گوگل شیت می‌گیرد
+async function fetchActiveFromSheet() {
+    try {
+        const response = await fetch(SCRIPT_URL); // درخواست به گوگل شیت
+        const actives = await response.json();    // دریافت لیست روشن‌ها
+        
+        actives.forEach(item => {
+            // چک کن: اگر این دستگاه در صفحه متصدی دوم نیست، اضافه‌اش کن
+            const existingRow = document.querySelector(`tr[data-row-id="${item.rowId}"]`);
+            if (!existingRow) {
+                addRow({
+                    id: item.rowId,
+                    name: item.name,
+                    tvNum: item.tvNum,
+                    startTime: item.startTime,
+                    isRunning: true,
+                    // زمان شروع واقعی را برای محاسبه کرونومتر استفاده می‌کنیم
+                    startTimestamp: new Date().setHours(item.startTime.split(':')[0], item.startTime.split(':')[1])
+                });
+                
+                // فعال کردن کرونومتر برای ردیف جدید
+                const newRow = document.querySelector(`tr[data-row-id="${item.rowId}"]`);
+                startStopwatch(newRow, true); // true یعنی فقط نمایش بده، دوباره به شیت پیام نزن
+            }
+        });
+    } catch (e) {
+        console.log("در حال چک کردن تغییرات جدید...");
+    }
+}
+
+// هر 30 ثانیه یکبار به صورت خودکار چک کن
+setInterval(fetchActiveFromSheet, 30000);
+async function syncData() {
+    try {
+        const response = await fetch(SCRIPT_URL + "?nocache=" + new Date().getTime());
+        const actives = await response.json();
+        
+        actives.forEach(item => {
+            // اگر این بازی در لیست این دستگاه نیست، اضافه‌اش کن
+            if (!document.querySelector(`tr[data-row-id="${item.rowId}"]`)) {
+                addRow({
+                    id: item.rowId,
+                    name: item.name,
+                    tvNum: item.tvNum,
+                    startTime: item.startTime,
+                    isRunning: true
+                });
+                // روشن کردن تایمر در این دستگاه
+                const newRow = document.querySelector(`tr[data-row-id="${item.rowId}"]`);
+                startStopwatch(newRow, true); // پارامتر true یعنی دوباره به سرور پیام نزن
+            }
+        });
+    } catch (e) {
+        console.log("در حال هماهنگ‌سازی با سرور...");
+    }
+}
+
+// هر ۳۰ ثانیه چک کن
+setInterval(syncData, 30000);
