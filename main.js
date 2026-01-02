@@ -179,7 +179,7 @@ function addRow(data = {}) {
         <td data-label="TV" class="tv-cell">
             <select class="tv-number" onchange="checkDuplicateTV(this); updateNoteHeader(this.closest('tr'));">
                 <option value="">...</option>
-                ${[1,2,3,4,5,6,7,8].map(n => `<option value="${n}" ${rowData.tvNum == n ? 'selected' : ''}>${n}</option>`).join('')}
+                ${[1,2,3,4,5].map(n => `<option value="${n}" ${rowData.tvNum == n ? 'selected' : ''}>${n}</option>`).join('')}
             </select>
         </td>
         <td data-label="دسته">
