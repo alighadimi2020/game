@@ -1,5 +1,5 @@
 const rowTimers = {}; 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwddG1JF1oGAVf75Q3ZU7yhw6bsJX2-bG-4ydidO4wa7RrAOeNb1KcHEs3oY-rxrg_MQA/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbweegrepVjbxlyETdwJG2n9VyiOVVpKGh-fNac-YGtuLeuk76dRPNm1wT6Q0nHlarQp/exec"; 
 
 
 
@@ -133,6 +133,7 @@ function updateGrandTotal() {
         totalDisplay.textContent = grandTotal.toLocaleString('fa-IR') + " تومان";
     }
 }
+
 function getHourlyRate(controllers) {
     const rates = { '1': 80000, '2': 140000, '3': 165000, '4': 220000 };
     return rates[controllers] || 0;
@@ -218,23 +219,14 @@ function addRow(data = {}) {
     updateGrandTotal();
 }
 
-// تابع جدید برای مدیریت تغییر دستی زمان
-function manualTimeChange(rowElement) {
-    rowElement.dataset.startTime = rowElement.querySelector('.start-time-input').value;
-    rowElement.dataset.endTime = rowElement.querySelector('.end-time-input').value;
-    calculateTotal(rowElement);
-    saveData();
-}
 
 function handleTimer(rowElement) {
     if (rowElement.dataset.isRunning === 'true') {
         stopStopwatch(rowElement);
     } else {
         const tvNum = rowElement.querySelector('.tv-number').value;
-        const personName = rowElement.querySelector('.person-name').value;
-
-        if (!tvNum || !personName) {
-            alert("لطفاً ابتدا نام مشتری و شماره تلویزیون را وارد کنید.");
+        if (!tvNum) {
+            alert("لطفاً ابتدا شماره تلویزیون را انتخاب کنید.");
             return;
         }
         startStopwatch(rowElement);
@@ -247,27 +239,10 @@ function startStopwatch(rowElement, isRecovery = false) {
     const now = new Date();
     
     if (!isRecovery) {
-        const startTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-        rowElement.dataset.startTime = startTime;
-        rowElement.querySelector('.start-time-input').value = startTime;
+        rowElement.dataset.startTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
         rowElement.dataset.startTimestamp = now.getTime();
         rowElement.dataset.isRunning = 'true';
-
-        // اطلاع به گوگل شیت برای شروع بازی (برای سینک شدن با بقیه متصدی‌ها)
-        const data = {
-            action: "start",
-            rowId: rowId,
-            name: rowElement.querySelector('.person-name').value,
-            tvNum: rowElement.querySelector('.tv-number').value,
-            startTime: startTime,
-            operator: document.getElementById('operatorName').value
-        };
-        
-        fetch(SCRIPT_URL, { 
-            method: 'POST', 
-            mode: 'no-cors',
-            body: JSON.stringify(data) 
-        });
+        rowElement.querySelector('.display-start-time').textContent = rowElement.dataset.startTime;
     }
 
     rowElement.querySelector('.stop-button').textContent = 'اتمام';
@@ -278,6 +253,7 @@ function startStopwatch(rowElement, isRecovery = false) {
     }, 1000);
     saveData();
 }
+
 function stopStopwatch(rowElement) {
     const rowId = rowElement.dataset.rowId;
     clearInterval(rowTimers[rowId]);
@@ -294,20 +270,6 @@ function stopStopwatch(rowElement) {
 
     calculateTotal(rowElement);
     saveData();
-
-    // اطلاع به گوگل شیت برای اتمام بازی و آرشیو شدن
-    const data = {
-        action: "end",
-        rowId: rowId,
-        endTime: endTime,
-        price: rowElement.querySelector('.priceBox').value
-    };
-    
-    fetch(SCRIPT_URL, { 
-        method: 'POST', 
-        mode: 'no-cors', // برای جلوگیری از خطای CORS در گوگل اسکریپت
-        body: JSON.stringify(data) 
-    });
 }
 
 function formatDuration(ms) {
@@ -364,6 +326,13 @@ async function sendToGoogleSheet() {
         btn.disabled = false;
         btn.textContent = "🚀 ارسال به گوگل شیت";
     }
+}
+
+function manualTimeChange(rowElement) {
+    rowElement.dataset.startTime = rowElement.querySelector('.start-time-input').value;
+    rowElement.dataset.endTime = rowElement.querySelector('.end-time-input').value;
+    calculateTotal(rowElement);
+    saveData();
 }
 
 function createNoteBox(rowId, rowData) {
@@ -498,63 +467,3 @@ document.addEventListener('DOMContentLoaded', function() {
             
         }, 2000); // مدت زمان نمایش "به نام خدا" (۳ ثانیه)
     });
-
-    // این تابع لیست دستگاه‌های روشن را از گوگل شیت می‌گیرد
-async function fetchActiveFromSheet() {
-    try {
-        const response = await fetch(SCRIPT_URL); // درخواست به گوگل شیت
-        const actives = await response.json();    // دریافت لیست روشن‌ها
-        
-        actives.forEach(item => {
-            // چک کن: اگر این دستگاه در صفحه متصدی دوم نیست، اضافه‌اش کن
-            const existingRow = document.querySelector(`tr[data-row-id="${item.rowId}"]`);
-            if (!existingRow) {
-                addRow({
-                    id: item.rowId,
-                    name: item.name,
-                    tvNum: item.tvNum,
-                    startTime: item.startTime,
-                    isRunning: true,
-                    // زمان شروع واقعی را برای محاسبه کرونومتر استفاده می‌کنیم
-                    startTimestamp: new Date().setHours(item.startTime.split(':')[0], item.startTime.split(':')[1])
-                });
-                
-                // فعال کردن کرونومتر برای ردیف جدید
-                const newRow = document.querySelector(`tr[data-row-id="${item.rowId}"]`);
-                startStopwatch(newRow, true); // true یعنی فقط نمایش بده، دوباره به شیت پیام نزن
-            }
-        });
-    } catch (e) {
-        console.log("در حال چک کردن تغییرات جدید...");
-    }
-}
-
-// هر 30 ثانیه یکبار به صورت خودکار چک کن
-setInterval(fetchActiveFromSheet, 30000);
-async function syncData() {
-    try {
-        const response = await fetch(SCRIPT_URL + "?nocache=" + new Date().getTime());
-        const actives = await response.json();
-        
-        actives.forEach(item => {
-            // اگر این بازی در لیست این دستگاه نیست، اضافه‌اش کن
-            if (!document.querySelector(`tr[data-row-id="${item.rowId}"]`)) {
-                addRow({
-                    id: item.rowId,
-                    name: item.name,
-                    tvNum: item.tvNum,
-                    startTime: item.startTime,
-                    isRunning: true
-                });
-                // روشن کردن تایمر در این دستگاه
-                const newRow = document.querySelector(`tr[data-row-id="${item.rowId}"]`);
-                startStopwatch(newRow, true); // پارامتر true یعنی دوباره به سرور پیام نزن
-            }
-        });
-    } catch (e) {
-        console.log("در حال هماهنگ‌سازی با سرور...");
-    }
-}
-
-// هر ۳۰ ثانیه چک کن
-setInterval(syncData, 30000);
