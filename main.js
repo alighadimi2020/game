@@ -223,23 +223,55 @@ async function syncWithServer() {
     try {
         const response = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
         const actives = await response.json();
+        
+        // ۱. اضافه کردن ردیف‌های جدیدی که در این دستگاه نیستند
         actives.forEach(item => {
-            if (!document.querySelector(`tr[data-row-id="${item.rowId}"]`)) {
+            const existingRow = document.querySelector(`tr[data-row-id="${item.rowId}"]`);
+            if (!existingRow) {
                 const now = new Date();
                 const [h, m] = item.startTime.split(':');
-                const startTS = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m).getTime();
-                addRow({ id: item.rowId, name: item.name, tvNum: item.tvNum, startTime: item.startTime, isRunning: true, startTimestamp: startTS });
+                // اصلاح مهم: ساخت دقیق Timestamp برای جلوگیری از NaN
+                const startTS = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(h), parseInt(m), 0).getTime();
+
+                addRow({
+                    id: item.rowId,
+                    name: item.name,
+                    tvNum: item.tvNum,
+                    startTime: item.startTime,
+                    isRunning: true,
+                    startTimestamp: startTS
+                });
                 const newRow = document.querySelector(`tr[data-row-id="${item.rowId}"]`);
                 startStopwatch(newRow, true);
             }
         });
-    } catch (e) { console.log("Syncing..."); }
+
+        // ۲. غیرفعال کردن ردیف‌هایی که در دستگاه‌های دیگر "اتمام" شده‌اند
+        const allLocalRows = document.querySelectorAll('#gameTable tbody tr');
+        allLocalRows.forEach(localRow => {
+            if (localRow.dataset.isRunning === 'true') {
+                const isStillActive = actives.find(a => a.rowId === localRow.dataset.rowId);
+                if (!isStillActive) {
+                    // اگر در شیت نبود، یعنی متصدی دیگر اتمام را زده
+                    clearInterval(rowTimers[localRow.dataset.rowId]);
+                    localRow.dataset.isRunning = 'false';
+                    localRow.querySelector('.stop-button').textContent = 'اتمام در دستگاه دیگر';
+                    localRow.querySelector('.stop-button').disabled = true;
+                    localRow.style.opacity = "0.7";
+                }
+            }
+        });
+    } catch (e) { console.log("در حال هماهنگ‌سازی..."); }
 }
 
 // --- توابع کمکی رابط کاربری ---
 function formatDuration(ms) {
+    if (isNaN(ms) || ms < 0) return "00:00:00";
     const s = Math.floor(ms / 1000);
-    return `${Math.floor(s/3600).toString().padStart(2,'0')}:${Math.floor((s%3600)/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
+    const hours = Math.floor(s / 3600).toString().padStart(2, '0');
+    const minutes = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
+    const seconds = (s % 60).toString().padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
 }
 
 function updateGrandTotal() {
