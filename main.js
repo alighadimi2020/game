@@ -1,5 +1,5 @@
 // --- تنظیمات اولیه ---
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwfHKoC9rtszOoYieLTgWXds5DXxavy3jbFSsaKp6CoQzP0h5m0oNfmialQk-Goafsd/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbylcKMfytOkn5tnHlAH7Eg9pHn30rAa2ZMnp_8587M2qozKKNFk6xCR1znfw9MfKnGe/exec"; 
 
 // --- توابع کمکی تبدیل قیمت و تاریخ ---
 function formatPrice(number) {
@@ -48,8 +48,8 @@ function getRowData() {
         const noteElement = document.getElementById(`note-${rowId}`);
         
         // اطمینان از گرفتن مقادیر دقیق تایم
-        const startTime = row.querySelector('.start-time-input').value;
-        const endTime = row.querySelector('.end-time-input').value;
+        const startTime = row.querySelector('.start-time-input').value || "";
+        const endTime = row.querySelector('.end-time-input').value || "";
 
         rows.push({
             id: rowId,
@@ -256,29 +256,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById("submitToSheetBtn").onclick = () => sendToGoogleSheet();
     
 document.getElementById("refreshBtn").onclick = async () => { 
-    if(confirm("هشدار: تمام داده‌ها ذخیره و حساب‌های بسته آرشیو می‌شوند. لیست گوشی خالی خواهد شد. ادامه؟")) {
-        const btn = document.getElementById("refreshBtn");
-        btn.textContent = "در حال پاکسازی...";
+    if(!confirm("حساب‌های بسته آرشیو شوند؟")) return;
+    
+    const btn = document.getElementById("refreshBtn");
+    btn.textContent = "در حال انجام...";
+    
+    // ۱. ارسال داده‌های فعلی به گوگل
+    await sendToGoogleSheet(true);
+    
+    // ۲. دستور حذف ردیف‌های بسته از شیت
+    try {
+        await fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify({ action: "clearForOperators" })
+        });
         
-        try {
-            // ۱. ارسال آخرین وضعیت به شیت
-            await sendToGoogleSheet(true);
-            
-            // ۲. دستور آرشیو به گوگل
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({ action: "clearForOperators" })
-            });
-            
-            // ۳. پاک کردن کامل حافظه گوشی
-            localStorage.removeItem('gameRoomData');
-            
-            alert("عملیات موفقیت‌آمیز بود.");
-            location.reload(); // رفرش صفحه برای لود لیست جدید از گوگل
-        } catch (e) {
-            alert("خطا در پاکسازی. اینترنت را چک کنید.");
-        }
+        // ۳. پاکسازی حافظه گوشی و بازسازی لیست (فقط موارد باز بمانند)
+        const allRows = getRowData();
+        const openRows = allRows.filter(r => !r.endTime); // فقط آنهایی که پایان ندارند
+        
+        const data = {
+            operatorName: document.getElementById('operatorName').value,
+            todayDate: document.getElementById('todayDate').value,
+            rows: openRows
+        };
+        localStorage.setItem('gameRoomData', JSON.stringify(data));
+        
+        alert("انجام شد.");
+        location.reload(); 
+    } catch (e) {
+        alert("خطا در ارتباط");
     }
 };
 
