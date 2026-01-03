@@ -1,5 +1,5 @@
 // --- تنظیمات اولیه ---
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbylcKMfytOkn5tnHlAH7Eg9pHn30rAa2ZMnp_8587M2qozKKNFk6xCR1znfw9MfKnGe/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwT-tgr70maaLTIuJsYumSk7SXCZOdkNKqngxT_dMytecGyHzWIbI5905UBw2mp4zxy/exec"; 
 
 // --- توابع کمکی تبدیل قیمت و تاریخ ---
 function formatPrice(number) {
