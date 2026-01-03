@@ -1,5 +1,5 @@
 // --- تنظیمات اولیه ---
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw9H-cCCUNad8eGHLiy8ZwsDIpHJ4L5Tkmrdb2uzmBahDTDivxSFyFEigJLWUoWuMyK/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwfHKoC9rtszOoYieLTgWXds5DXxavy3jbFSsaKp6CoQzP0h5m0oNfmialQk-Goafsd/exec"; 
 
 // --- توابع کمکی تبدیل قیمت و تاریخ ---
 function formatPrice(number) {
@@ -46,13 +46,18 @@ function getRowData() {
     document.querySelectorAll('#gameTable tbody tr').forEach(row => {
         const rowId = row.dataset.rowId; 
         const noteElement = document.getElementById(`note-${rowId}`);
+        
+        // اطمینان از گرفتن مقادیر دقیق تایم
+        const startTime = row.querySelector('.start-time-input').value;
+        const endTime = row.querySelector('.end-time-input').value;
+
         rows.push({
             id: rowId,
             name: row.querySelector('.person-name').value,
             tvNum: row.querySelector('.tv-number').value,
             controller: row.querySelector('.controller-select').value,
-            startTime: row.querySelector('.start-time-input').value || '', 
-            endTime: row.querySelector('.end-time-input').value || '', 
+            startTime: startTime || '', 
+            endTime: endTime || '', 
             price: unformatPrice(row.querySelector('.priceBox').value),
             paymentType: row.querySelector('.payment-type').value,
             notes: noteElement ? noteElement.value : '',
@@ -60,7 +65,6 @@ function getRowData() {
     });
     return rows;
 }
-
 function saveData() {
     const data = {
         operatorName: document.getElementById('operatorName').value,
@@ -167,35 +171,42 @@ function addRow(data = {}) {
     const row = document.createElement("tr");
     row.dataset.rowId = rowId;
     
+    // مقداردهی اولیه با دقت بالا
     const rowData = { 
-        name: '', tvNum: '', controller: '4', price: '0', 
-        paymentType: 'cash', startTime: '', endTime: '', ...data 
+        name: data.name || '', 
+        tvNum: data.tvNum || '', 
+        controller: data.controller || '4', 
+        price: data.price || '0', 
+        paymentType: data.paymentType || 'cash', 
+        startTime: data.startTime || '', 
+        endTime: data.endTime || '',
+        notes: data.notes || ''
     };
 
     row.innerHTML = `
-        <td data-label="نام"><input type="text" class="person-name" value="${rowData.name}" onchange="saveData()"></td> 
-        <td data-label="TV">
+        <td><input type="text" class="person-name" value="${rowData.name}" onchange="saveData()"></td> 
+        <td>
             <select class="tv-number" onchange="saveData()">
                 <option value="">...</option>
                 ${[1,2,3,4,5,6,7,8].map(n => `<option value="${n}" ${rowData.tvNum == n ? 'selected' : ''}>${n}</option>`).join('')}
             </select>
         </td>
-        <td data-label="دسته">
+        <td>
             <select class="controller-select" onchange="calculateTotal(this.closest('tr'))">
                 <option value="4" ${rowData.controller == '4' ? 'selected' : ''}>4 دسته</option>
                 <option value="2" ${rowData.controller == '2' ? 'selected' : ''}>2 دسته</option>
             </select>
         </td>
-        <td data-label="شروع"><input type="time" class="start-time-input" value="${rowData.startTime}" onchange="calculateTotal(this.closest('tr'))"></td>
-        <td data-label="پایان"><input type="time" class="end-time-input" value="${rowData.endTime}" onchange="calculateTotal(this.closest('tr'))"></td>
-        <td data-label="قیمت"><input class="priceBox" type="text" readonly value="${formatPrice(rowData.price)}"></td>
-        <td data-label="پرداخت">
+        <td><input type="time" class="start-time-input" value="${rowData.startTime}" onchange="calculateTotal(this.closest('tr'))"></td>
+        <td><input type="time" class="end-time-input" value="${rowData.endTime}" onchange="calculateTotal(this.closest('tr'))"></td>
+        <td><input class="priceBox" type="text" readonly value="${formatPrice(rowData.price)}"></td>
+        <td>
             <select class="payment-type" onchange="saveData()">
                 <option value="cash" ${rowData.paymentType == 'cash' ? 'selected' : ''}>نقد</option>
                 <option value="card" ${rowData.paymentType == 'card' ? 'selected' : ''}>کارت</option>
             </select>
         </td>
-        <td data-label="حذف"><button class="delete-button" onclick="deleteRow(this.closest('tr'))">حذف</button></td>
+        <td><button class="delete-button" onclick="deleteRow(this.closest('tr'))">حذف</button></td>
     `;
     
     tableBody.appendChild(row);
@@ -244,17 +255,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById("addRowBtn").onclick = () => { addRow(); saveData(); };
     document.getElementById("submitToSheetBtn").onclick = () => sendToGoogleSheet();
     
-    document.getElementById("refreshBtn").onclick = async () => { 
-        if(confirm("سیستم ابتدا داده‌ها را ذخیره کرده و حساب‌های بسته را آرشیو می‌کند. ادامه؟")) {
+document.getElementById("refreshBtn").onclick = async () => { 
+    if(confirm("هشدار: تمام داده‌ها ذخیره و حساب‌های بسته آرشیو می‌شوند. لیست گوشی خالی خواهد شد. ادامه؟")) {
+        const btn = document.getElementById("refreshBtn");
+        btn.textContent = "در حال پاکسازی...";
+        
+        try {
+            // ۱. ارسال آخرین وضعیت به شیت
             await sendToGoogleSheet(true);
+            
+            // ۲. دستور آرشیو به گوگل
             await fetch(SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
                 body: JSON.stringify({ action: "clearForOperators" })
             });
-            location.reload();
+            
+            // ۳. پاک کردن کامل حافظه گوشی
+            localStorage.removeItem('gameRoomData');
+            
+            alert("عملیات موفقیت‌آمیز بود.");
+            location.reload(); // رفرش صفحه برای لود لیست جدید از گوگل
+        } catch (e) {
+            alert("خطا در پاکسازی. اینترنت را چک کنید.");
         }
-    };
+    }
+};
 
     // منوی همبرگری
     const menuBtn = document.getElementById('menuToggleBtn');
